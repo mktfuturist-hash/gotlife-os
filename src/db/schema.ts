@@ -1,0 +1,173 @@
+import {
+  pgTable,
+  serial,
+  text,
+  integer,
+  boolean,
+  timestamp,
+  date,
+  real,
+  bigint,
+} from "drizzle-orm/pg-core";
+
+// ── 영역: 최상위 카테고리. pillar = 일/삶/돈 3기둥 ──
+export const areas = pgTable("areas", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  icon: text("icon"),
+  pillar: text("pillar", { enum: ["work", "life", "money"] })
+    .notNull()
+    .default("life"),
+  guideline: text("guideline"),
+  sort: integer("sort").notNull().default(0),
+  archived: boolean("archived").notNull().default(false),
+});
+
+// ── 목표: metric_* 컬럼이 자동 진척률 엔진 ──
+export const goals = pgTable("goals", {
+  id: serial("id").primaryKey(),
+  areaId: integer("area_id").references(() => areas.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  dueDate: date("due_date"),
+  status: text("status", { enum: ["active", "done", "hold"] })
+    .notNull()
+    .default("active"),
+  metricType: text("metric_type", {
+    enum: ["manual", "milestone", "routine_count", "task_rate", "money"],
+  })
+    .notNull()
+    .default("milestone"),
+  metricTarget: real("metric_target"),
+  metricCurrent: real("metric_current"),
+  metricUnit: text("metric_unit"),
+  moneyAccountId: integer("money_account_id"),
+});
+
+export const milestones = pgTable("milestones", {
+  id: serial("id").primaryKey(),
+  goalId: integer("goal_id")
+    .notNull()
+    .references(() => goals.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  dueDate: date("due_date"),
+  done: boolean("done").notNull().default(false),
+  doneAt: timestamp("done_at"),
+});
+
+export const projects = pgTable("projects", {
+  id: serial("id").primaryKey(),
+  areaId: integer("area_id").references(() => areas.id),
+  goalId: integer("goal_id").references(() => goals.id),
+  title: text("title").notNull(),
+  purpose: text("purpose"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  status: text("status", { enum: ["planned", "active", "done", "hold"] })
+    .notNull()
+    .default("active"),
+  guideline: text("guideline"),
+  retro: text("retro"),
+});
+
+// 인박스 = projectId IS NULL AND dueDate IS NULL
+export const tasks = pgTable("tasks", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
+  areaId: integer("area_id").references(() => areas.id),
+  title: text("title").notNull(),
+  dueDate: date("due_date"),
+  done: boolean("done").notNull().default(false),
+  doneAt: timestamp("done_at"),
+  priority: integer("priority").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const kpis = pgTable("kpis", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  target: real("target"),
+  actual: real("actual"),
+  unit: text("unit"),
+});
+
+export const routines = pgTable("routines", {
+  id: serial("id").primaryKey(),
+  goalId: integer("goal_id").references(() => goals.id),
+  areaId: integer("area_id").references(() => areas.id),
+  title: text("title").notNull(),
+  status: text("status", { enum: ["active", "stopped"] })
+    .notNull()
+    .default("active"),
+  targetFreqWeekly: integer("target_freq_weekly"),
+});
+
+// 루틴 원터치 기록 — 클릭 시각 자동 저장
+export const routineLogs = pgTable("routine_logs", {
+  id: serial("id").primaryKey(),
+  routineId: integer("routine_id")
+    .notNull()
+    .references(() => routines.id, { onDelete: "cascade" }),
+  loggedAt: timestamp("logged_at").notNull().defaultNow(),
+});
+
+export const notes = pgTable("notes", {
+  id: serial("id").primaryKey(),
+  areaId: integer("area_id").references(() => areas.id),
+  goalId: integer("goal_id").references(() => goals.id),
+  projectId: integer("project_id").references(() => projects.id),
+  title: text("title").notNull(),
+  type: text("type", { enum: ["note", "file", "link", "reference"] })
+    .notNull()
+    .default("note"),
+  importance: integer("importance").notNull().default(1),
+  status: text("status", { enum: ["active", "archived"] })
+    .notNull()
+    .default("active"),
+  bodyMd: text("body_md"),
+  url: text("url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const reviews = pgTable("reviews", {
+  id: serial("id").primaryKey(),
+  scope: text("scope", { enum: ["daily", "weekly", "monthly"] }).notNull(),
+  date: date("date").notNull(),
+  planMd: text("plan_md"),
+  retroMd: text("retro_md"),
+});
+
+// ── 돈: 자산 계좌(수기 잔액) + 월별 스냅샷 + 일일가계부 ──
+export const moneyAccounts = pgTable("money_accounts", {
+  id: serial("id").primaryKey(),
+  type: text("type", {
+    enum: ["savings", "invest", "realestate", "loan", "pension"],
+  }).notNull(),
+  name: text("name").notNull(),
+  balance: bigint("balance", { mode: "number" }).notNull().default(0),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const moneySnapshots = pgTable("money_snapshots", {
+  id: serial("id").primaryKey(),
+  accountId: integer("account_id")
+    .notNull()
+    .references(() => moneyAccounts.id, { onDelete: "cascade" }),
+  month: text("month").notNull(), // YYYY-MM
+  balance: bigint("balance", { mode: "number" }).notNull(),
+});
+
+export const moneyTxns = pgTable("money_txns", {
+  id: serial("id").primaryKey(),
+  date: date("date").notNull(),
+  amount: bigint("amount", { mode: "number" }).notNull(),
+  direction: text("direction", { enum: ["income", "expense"] }).notNull(),
+  category: text("category").notNull(),
+  accountId: integer("account_id").references(() => moneyAccounts.id),
+  memo: text("memo"),
+});
