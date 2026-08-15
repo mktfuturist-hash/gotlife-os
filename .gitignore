@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .data/
+
+# 개인 작업 파일
+*.jpg
+제작과정/
