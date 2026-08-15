@@ -5,8 +5,9 @@ import { redirect } from "next/navigation";
 import { and, eq, gte, lt } from "drizzle-orm";
 import {
   db, areas, goals, milestones, tasks, projects, kpis, routines, routineLogs,
+  moneyAccounts, moneySnapshots, moneyTxns,
 } from "@/db";
-import { todayStr } from "@/lib/dates";
+import { monthStr, todayStr } from "@/lib/dates";
 
 function str(fd: FormData, key: string): string | null {
   const v = fd.get(key);
@@ -285,6 +286,76 @@ export async function deleteRoutine(id: number) {
 /** 원터치 루틴 기록 — 클릭 시각 자동 저장 (갓생 OS '루틴 기록' 버튼) */
 export async function logRoutine(id: number) {
   await db.insert(routineLogs).values({ routineId: id });
+  refresh();
+}
+
+// ── 돈: 계좌 ──
+type AccountType = "savings" | "invest" | "realestate" | "loan" | "pension";
+
+async function snapshotAccount(accountId: number, balance: number) {
+  const month = monthStr();
+  const existing = await db
+    .select()
+    .from(moneySnapshots)
+    .where(and(eq(moneySnapshots.accountId, accountId), eq(moneySnapshots.month, month)));
+  if (existing.length) {
+    await db
+      .update(moneySnapshots)
+      .set({ balance })
+      .where(eq(moneySnapshots.id, existing[0].id));
+  } else {
+    await db.insert(moneySnapshots).values({ accountId, month, balance });
+  }
+}
+
+export async function createAccount(fd: FormData) {
+  const name = str(fd, "name");
+  if (!name) return;
+  const balance = num(fd, "balance") ?? 0;
+  const [a] = await db
+    .insert(moneyAccounts)
+    .values({ name, type: (str(fd, "type") ?? "savings") as AccountType, balance })
+    .returning({ id: moneyAccounts.id });
+  await snapshotAccount(a.id, balance);
+  refresh();
+}
+
+/** 잔액 수기 갱신 — 이번 달 스냅샷도 함께 기록 (순자산 추이의 원천) */
+export async function updateAccountBalance(id: number, fd: FormData) {
+  const balance = num(fd, "balance");
+  if (balance == null) return;
+  await db
+    .update(moneyAccounts)
+    .set({ balance, updatedAt: new Date() })
+    .where(eq(moneyAccounts.id, id));
+  await snapshotAccount(id, balance);
+  refresh();
+}
+
+export async function deleteAccount(id: number) {
+  await db.update(moneyTxns).set({ accountId: null }).where(eq(moneyTxns.accountId, id));
+  await db.delete(moneyAccounts).where(eq(moneyAccounts.id, id));
+  refresh();
+}
+
+// ── 돈: 일일가계부 ──
+export async function addTxn(fd: FormData) {
+  const amount = num(fd, "amount");
+  const category = str(fd, "category");
+  if (!amount || !category) return;
+  await db.insert(moneyTxns).values({
+    date: str(fd, "date") ?? todayStr(),
+    amount: Math.abs(amount),
+    direction: (str(fd, "direction") ?? "expense") as "income" | "expense",
+    category,
+    accountId: num(fd, "accountId"),
+    memo: str(fd, "memo"),
+  });
+  refresh();
+}
+
+export async function deleteTxn(id: number) {
+  await db.delete(moneyTxns).where(eq(moneyTxns.id, id));
   refresh();
 }
 
