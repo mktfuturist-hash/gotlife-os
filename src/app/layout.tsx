@@ -1,10 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 
 export const metadata: Metadata = {
   title: "갓생 OS",
   description: "일·삶·돈 세 기둥으로 목표와 진척을 한눈에 관리하는 개인 OS",
+  appleWebApp: { capable: true, title: "갓생 OS", statusBarStyle: "default" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#171717",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
