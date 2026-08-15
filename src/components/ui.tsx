@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
 export const PILLARS = {
-  work: { label: "일", icon: "💼", color: "text-blue-600", bar: "bg-blue-500", chip: "bg-blue-50 text-blue-700 border-blue-200" },
-  life: { label: "삶", icon: "🌱", color: "text-emerald-600", bar: "bg-emerald-500", chip: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  money: { label: "돈", icon: "💰", color: "text-amber-600", bar: "bg-amber-500", chip: "bg-amber-50 text-amber-700 border-amber-200" },
+  work: { label: "Work", icon: "💼", color: "text-blue-600", bar: "bg-blue-500", chip: "bg-blue-50 text-blue-700 border-blue-200" },
+  life: { label: "Life", icon: "🌱", color: "text-emerald-600", bar: "bg-emerald-500", chip: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  money: { label: "Money", icon: "💰", color: "text-amber-600", bar: "bg-amber-500", chip: "bg-amber-50 text-amber-700 border-amber-200" },
 } as const;
 
 export type Pillar = keyof typeof PILLARS;

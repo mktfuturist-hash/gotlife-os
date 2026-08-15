@@ -347,7 +347,7 @@ const PLAN_TEMPLATES: Record<string, { plan: string; retro: string }> = {
     retro: "## 이번 주 성과\n- \n\n## 진척이 없었던 것과 이유\n- \n\n## 다음 주에 집중할 것\n- \n",
   },
   monthly: {
-    plan: "## 이번 달 목표 (영역별)\n- 일: \n- 삶: \n- 돈: \n\n## 이번 달의 테마\n",
+    plan: "## 이번 달 목표 (영역별)\n- Work: \n- Life: \n- Money: \n\n## 이번 달의 테마\n",
     retro: "## 목표 대비 결과\n- \n\n## 이번 달 배운 것\n- \n\n## 다음 달 조정할 것\n- \n",
   },
 };

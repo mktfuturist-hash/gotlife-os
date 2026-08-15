@@ -25,9 +25,9 @@ export default async function AreasPage() {
           <input name="icon" placeholder="🏃" className="w-16 text-center" maxLength={4} />
           <input name="name" placeholder="영역 이름 (예: 건강)" required className="w-44" />
           <select name="pillar" defaultValue="life">
-            <option value="work">일</option>
-            <option value="life">삶</option>
-            <option value="money">돈</option>
+            <option value="work">Work</option>
+            <option value="life">Life</option>
+            <option value="money">Money</option>
           </select>
           <input name="guideline" placeholder="이 영역에서 나는 어떤 사람이 되고 싶은가?" className="min-w-60 flex-1" />
           <button type="submit">추가</button>
