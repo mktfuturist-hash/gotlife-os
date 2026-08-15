@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { and, asc, eq } from "drizzle-orm";
-import { db, areas, tasks } from "@/db";
+import { asc, eq, inArray } from "drizzle-orm";
+import { db, areas, tasks, routines, routineLogs } from "@/db";
 import { getGoalsWithProgress } from "@/lib/progress";
-import { createTask, toggleTask } from "@/lib/actions";
+import { createTask, toggleTask, logRoutine, unlogRoutineToday } from "@/lib/actions";
+import { computeRoutineStats } from "@/lib/routine-stats";
 import { todayStr, ddayLabel, fmtDate } from "@/lib/dates";
 import {
   Card, DdayBadge, Empty, PILLARS, ProgressBar, SectionTitle, type Pillar,
@@ -12,11 +13,18 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const today = todayStr();
-  const [gs, areaList, openTasks] = await Promise.all([
+  const [gs, areaList, openTasks, activeRoutines] = await Promise.all([
     getGoalsWithProgress(),
     db.select().from(areas).orderBy(asc(areas.sort), asc(areas.id)),
     db.select().from(tasks).where(eq(tasks.done, false)).orderBy(asc(tasks.dueDate)),
+    db.select().from(routines).where(eq(routines.status, "active")).orderBy(asc(routines.id)),
   ]);
+  const rtLogs = activeRoutines.length
+    ? await db
+        .select()
+        .from(routineLogs)
+        .where(inArray(routineLogs.routineId, activeRoutines.map((r) => r.id)))
+    : [];
   const todayTasks = openTasks.filter((t) => t.dueDate && t.dueDate <= today);
   const activeGoals = gs.filter((g) => g.status === "active");
 
@@ -90,6 +98,34 @@ export default async function Home() {
           );
         })}
       </div>
+
+      {/* 오늘의 루틴: 원터치 체크 */}
+      {activeRoutines.length > 0 && (
+        <section>
+          <SectionTitle>🔁 오늘의 루틴</SectionTitle>
+          <div className="flex flex-wrap gap-2">
+            {activeRoutines.map((r) => {
+              const st = computeRoutineStats(
+                rtLogs.filter((l) => l.routineId === r.id).map((l) => l.loggedAt)
+              );
+              return st.doneToday ? (
+                <form key={r.id} action={unlogRoutineToday.bind(null, r.id)}>
+                  <button className="flex items-center gap-1.5 rounded-full bg-emerald-500 px-3.5 py-1.5 text-sm font-medium text-white shadow-sm">
+                    ✓ {r.title}
+                    {st.streak > 1 && <span className="text-xs opacity-80">🔥{st.streak}</span>}
+                  </button>
+                </form>
+              ) : (
+                <form key={r.id} action={logRoutine.bind(null, r.id)}>
+                  <button className="flex items-center gap-1.5 rounded-full border border-dashed border-neutral-300 bg-white px-3.5 py-1.5 text-sm text-neutral-500 hover:border-emerald-400 hover:text-emerald-600">
+                    {r.title}
+                  </button>
+                </form>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* 오늘의 할 일 */}
       <section>
