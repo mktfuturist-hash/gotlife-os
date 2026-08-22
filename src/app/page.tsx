@@ -35,14 +35,38 @@ export default async function Home() {
 
   return (
     <div className="space-y-8">
-      <header className="flex items-end justify-between">
+      <header className="flex items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">올인원 대시보드</h1>
           <p className="mt-1 text-sm text-neutral-500">
             {fmtDate(today)} ({weekday}) — 오늘 할 일 {todayTasks.length}개
           </p>
         </div>
+        <Link
+          href="/guide"
+          className="shrink-0 rounded-full border border-neutral-300 bg-white px-3.5 py-1.5 text-sm font-medium text-neutral-700 shadow-sm hover:border-neutral-500 hover:bg-neutral-50"
+        >
+          📖 사용 설명서
+        </Link>
       </header>
+
+      {/* 온보딩: 아직 아무것도 없을 때 설명서부터 안내 */}
+      {areaList.length === 0 && activeGoals.length === 0 && (
+        <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-emerald-50 p-5">
+          <h2 className="font-bold">👋 처음 오셨나요?</h2>
+          <p className="mt-1 text-sm text-neutral-600">
+            입력을 시작하기 전에 <b>사용 설명서</b>를 먼저 읽어보세요. 데이터가 어떻게 연동되는지,
+            그리고 <b>영역 → 목표 → 마일스톤 → 프로젝트 → 할 일</b> 순서로 세팅하는 법을 5분 안에
+            안내합니다.
+          </p>
+          <Link
+            href="/guide"
+            className="mt-3 inline-block rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
+          >
+            사용 설명서 읽고 시작하기 →
+          </Link>
+        </div>
+      )}
 
       {/* 인박스 빠른 던지기 */}
       <Card>
